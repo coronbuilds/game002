@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+
+<title>DODGE OR DIE</title>
+
+<style>
+
+*{
+  box-sizing:border-box;
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+
+html,body{
+  margin:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:#050509;
+  color:white;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  touch-action:none;
+}
+
+#game{
+  position:relative;
+  width:100%;
+  height:100%;
+  max-width:600px;
+  margin:auto;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 50% 30%,#18283d,#070b12 55%,#020204);
+}
+
+#game.danger{
+  background:
+    radial-gradient(circle at 50% 30%,#3a1018,#09070b 55%,#020204);
+}
+
+#game.shake{
+  animation:shake .22s;
+}
+
+@keyframes shake{
+  0%,100%{transform:translate(0)}
+  25%{transform:translate(-8px,3px)}
+  50%{transform:translate(7px,-4px)}
+  75%{transform:translate(-4px,4px)}
+}
+
+#hud{
+  position:absolute;
+  z-index:50;
+  top:0;
+  left:0;
+  right:0;
+  display:grid;
+  grid-template-columns:1fr 1.4fr 1fr;
+  padding:14px;
+}
+
+.stat{
+  text-align:center;
+}
+
+.label{
+  color:#7f899d;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:2px;
+}
+
+.value{
+  font-size:21px;
+  font-weight:1000;
+}
+
+#score{
+  font-size:29px;
+}
+
+#combo{
+  color:#65eaff;
+}
+
+#best{
+  color:#ffe45b;
+}
+
+#arena{
+  position:absolute;
+  inset:65px 0 0;
+  overflow:hidden;
+}
+
+#player{
+  position:absolute;
+  bottom:35px;
+  left:50%;
+  width:48px;
+  height:48px;
+  transform:translateX(-50%);
+  border-radius:14px;
+  background:
+    linear-gradient(135deg,#fff,#5deaff 30%,#0878ff);
+  border:3px solid #c9faff;
+  box-shadow:
+    0 0 25px rgba(50,210,255,.8),
+    0 0 60px rgba(30,130,255,.35);
+  z-index:20;
+}
+
+#player:after{
+  content:"";
+  position:absolute;
+  left:50%;
+  bottom:-14px;
+  width:18px;
+  height:20px;
+  transform:translateX(-50%);
+  background:linear-gradient(#5deaff,transparent);
+  filter:blur(2px);
+}
+
+.enemy{
+  position:absolute;
+  width:38px;
+  height:38px;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:
+    radial-gradient(circle at 30% 25%,#fff,#ff5368 10%,#d5002b 45%,#4b0010);
+  border:2px solid #ff8797;
+  box-shadow:0 0 22px rgba(255,30,60,.8);
+}
+
+.enemy.fast{
+  width:30px;
+  height:30px;
+  box-shadow:0 0 30px rgba(255,60,80,1);
+}
+
+.enemy.big{
+  width:60px;
+  height:60px;
+  border-radius:15px;
+}
+
+.gem{
+  position:absolute;
+  width:27px;
+  height:27px;
+  transform:translate(-50%,-50%) rotate(45deg);
+  border-radius:6px;
+  background:
+    linear-gradient(135deg,#fff,#72f5ff 35%,#008dff);
+  border:2px solid #b8faff;
+  box-shadow:0 0 25px rgba(50,220,255,.9);
+}
+
+.gem:after{
+  content:"";
+  position:absolute;
+  inset:5px;
+  border:1px solid white;
+  opacity:.6;
+}
+
+.star{
+  position:absolute;
+  width:34px;
+  height:34px;
+  transform:translate(-50%,-50%);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:27px;
+  filter:drop-shadow(0 0 10px #ffe44d);
+}
+
+.pop{
+  position:absolute;
+  z-index:80;
+  pointer-events:none;
+  font-size:22px;
+  font-weight:1000;
+  transform:translate(-50%,-50%);
+  animation:pop .65s forwards;
+}
+
+@keyframes pop{
+  0%{
+    opacity:0;
+    transform:translate(-50%,-50%) scale(.5);
+  }
+  20%{
+    opacity:1;
+    transform:translate(-50%,-80%) scale(1.2);
+  }
+  100%{
+    opacity:0;
+    transform:translate(-50%,-170%);
+  }
+}
+
+.particle{
+  position:absolute;
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  z-index:70;
+  pointer-events:none;
+  animation:particle .55s forwards;
+}
+
+@keyframes particle{
+  to{
+    transform:translate(var(--x),var(--y)) scale(0);
+    opacity:0;
+  }
+}
+
+#dangerBar{
+  position:absolute;
+  z-index:45;
+  left:12px;
+  right:12px;
+  top:61px;
+  height:3px;
+  background:#202533;
+}
+
+#dangerFill{
+  width:0;
+  height:100%;
+  background:linear-gradient(90deg,#45eaff,#ffe34f,#ff304f);
+}
+
+.screen{
+  position:absolute;
+  inset:0;
+  z-index:100;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:25px;
+  background:
+    radial-gradient(circle at 50% 30%,rgba(30,180,255,.16),transparent 35%),
+    rgba(2,3,7,.95);
+}
+
+.hidden{
+  display:none!important;
+}
+
+.logo{
+  font-size:clamp(43px,15vw,78px);
+  line-height:.82;
+  font-weight:1000;
+  letter-spacing:-4px;
+}
+
+.logo span{
+  color:#29dfff;
+}
+
+.tag{
+  margin-top:18px;
+  color:#929bad;
+  font-size:12px;
+  letter-spacing:1px;
+}
+
+.rule{
+  width:min(350px,92%);
+  margin-top:24px;
+  padding:16px;
+  border-radius:16px;
+  border:1px solid #272e3e;
+  background:#0d1119;
+  line-height:1.8;
+  font-size:13px;
+}
+
+.cyan{
+  color:#55eaff;
+}
+
+.red{
+  color:#ff4964;
+}
+
+.yellow{
+  color:#ffe34d;
+}
+
+.mainBtn{
+  width:min(340px,92%);
+  margin-top:22px;
+  padding:17px;
+  border:0;
+  border-radius:16px;
+  color:white;
+  background:linear-gradient(135deg,#08cfff,#0064ff);
+  box-shadow:0 10px 35px rgba(0,170,255,.3);
+  font-size:19px;
+  font-weight:1000;
+}
+
+.mainBtn:active{
+  transform:scale(.95);
+}
+
+.subBtn{
+  margin-top:10px;
+  padding:11px 23px;
+  border:1px solid #303646;
+  border-radius:12px;
+  background:#141923;
+  color:#aeb6c8;
+  font-weight:800;
+}
+
+.result{
+  margin-top:12px;
+  color:#aeb6c8;
+  font-size:13px;
+  line-height:1.9;
+}
+
+#finalScore{
+  margin-top:5px;
+  font-size:70px;
+  line-height:1;
+  font-weight:1000;
+}
+
+#record{
+  margin-top:10px;
+  color:#ffe34d;
+  font-weight:1000;
+}
+
+#mission{
+  width:min(340px,92%);
+  margin-top:18px;
+  padding:12px;
+  border:1px solid #272d3c;
+  background:#0e121a;
+  border-radius:13px;
+  color:#929bad;
+  font-size:12px;
+}
+
+#mission b{
+  color:white;
+}
+
+#hint{
+  position:absolute;
+  z-index:30;
+  bottom:10px;
+  left:50%;
+  transform:translateX(-50%);
+  color:#687386;
+  font-size:10px;
+  white-space:nowrap;
+  pointer-events:none;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="game">
+
+  <div id="hud">
+
+    <div class="stat">
+      <div class="label">SCORE</div>
+      <div id="score" class="value">0</div>
+    </div>
+
+    <div class="stat">
+      <div class="label">COMBO</div>
+      <div id="combo" class="value">x0</div>
+    </div>
+
+    <div class="stat">
+      <div class="label">BEST</div>
+      <div id="best" class="value">0</div>
+    </div>
+
+  </div>
+
+  <div id="dangerBar">
+    <div id="dangerFill"></div>
+  </div>
+
+  <div id="arena">
+
+    <div id="player"></div>
+
+  </div>
+
+  <div id="hint">
+    ← 指を動かして避けろ →
+  </div>
+
+
+  <!-- TITLE -->
+
+  <div id="start" class="screen">
+
+    <div class="logo">
+      DODGE<br>
+      <span>OR DIE</span>
+    </div>
+
+    <div class="tag">
+      SURVIVE. COLLECT. DON'T DIE.
+    </div>
+
+    <div class="rule">
+
+      <span class="cyan">💎 GEM</span>
+      → 取ると +100<br>
+
+      <span class="yellow">⭐ STAR</span>
+      → コンボボーナス<br>
+
+      <span class="red">🔴 ENEMY</span>
+      → 当たったら終了<br>
+
+      <br>
+
+      <b>時間が経つほど速くなる。</b>
+
+    </div>
+
+    <button
+      id="startBtn"
+      class="mainBtn">
+      PLAY
+    </button>
+
+    <button
+      id="resetBtn"
+      class="subBtn">
+      データリセット
+    </button>
+
+  </div>
+
+
+  <!-- GAME OVER -->
+
+  <div id="over" class="screen hidden">
+
+    <div class="tag">
+      GAME OVER
+    </div>
+
+    <div id="finalScore">
+      0
+    </div>
+
+    <div class="result">
+      BEST　
+      <b id="finalBest">0</b>
+      <br>
+      MAX COMBO　
+      <b id="finalCombo">0</b>
+    </div>
+
+    <div id="record" class="hidden">
+      🏆 NEW RECORD
+    </div>
+
+    <div id="mission">
+      今日の記録：
+      <b id="missionText"></b>
+    </div>
+
+    <button
+      id="retry"
+      class="mainBtn">
+      AGAIN
+    </button>
+
+    <button
+      id="titleBtn"
+      class="subBtn">
+      TITLE
+    </button>
+
+  </div>
+
+</div>
+
+
+<script>
+
+let score = 0;
+let combo = 0;
+let maxCombo = 0;
+
+let best =
+  Number(
+    localStorage.getItem("dod2_best") || 0
+  );
+
+let running = false;
+
+let elapsed = 0;
+
+let spawnTimer = null;
+let gameTimer = null;
+
+let enemyList = [];
+let itemList = [];
+
+let playerX = 0;
+
+let audio = null;
+
+
+/* =========================
+   ELEMENTS
+========================= */
+
+const game =
+  document.getElementById("game");
+
+const arena =
+  document.getElementById("arena");
+
+const player =
+  document.getElementById("player");
+
+const scoreEl =
+  document.getElementById("score");
+
+const comboEl =
+  document.getElementById("combo");
+
+const bestEl =
+  document.getElementById("best");
+
+const dangerFill =
+  document.getElementById("dangerFill");
+
+const startScreen =
+  document.getElementById("start");
+
+const overScreen =
+  document.getElementById("over");
+
+const finalScore =
+  document.getElementById("finalScore");
+
+const finalBest =
+  document.getElementById("finalBest");
+
+const finalCombo =
+  document.getElementById("finalCombo");
+
+const record =
+  document.getElementById("record");
+
+const missionText =
+  document.getElementById("missionText");
+
+
+/* =========================
+   AUDIO
+========================= */
+
+function beep(
+  freq,
+  duration=.07,
+  type="sine",
+  volume=.03
+){
+
+  try{
+
+    if(!audio){
+
+      audio =
+        new(
+          window.AudioContext ||
+          window.webkitAudioContext
+        )();
+
+    }
+
+    const osc =
+      audio.createOscillator();
+
+    const gain =
+      audio.createGain();
+
+    osc.type = type;
+
+    osc.frequency.value = freq;
+
+    gain.gain.setValueAtTime(
+      volume,
+      audio.currentTime
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+      .001,
+      audio.currentTime + duration
+    );
+
+    osc.connect(gain);
+
+    gain.connect(
+      audio.destination
+    );
+
+    osc.start();
+
+    osc.stop(
+      audio.currentTime + duration
+    );
+
+  }catch(e){}
+
+}
+
+
+/* =========================
+   START
+========================= */
+
+function startGame(){
+
+  startScreen.classList.add(
+    "hidden"
+  );
+
+  overScreen.classList.add(
+    "hidden"
+  );
+
+  arena
+    .querySelectorAll(
+      ".enemy,.gem,.star,.pop,.particle"
+    )
+    .forEach(
+      e=>e.remove()
+    );
+
+  score = 0;
+  combo = 0;
+  maxCombo = 0;
+
+  elapsed = 0;
+
+  enemyList = [];
+  itemList = [];
+
+  running = true;
+
+  playerX =
+    arena.clientWidth / 2;
+
+  player.style.left =
+    playerX + "px";
+
+  updateHUD();
+
+  clearInterval(
+    spawnTimer
+  );
+
+  clearInterval(
+    gameTimer
+  );
+
+  spawnTimer =
+    setInterval(
+      spawnObject,
+      spawnRate()
+    );
+
+  gameTimer =
+    setInterval(
+      tick,
+      100
+    );
+
+  beep(500,.08);
+
+  setTimeout(
+    ()=>{
+      beep(850,.1);
+    },
+    80
+  );
+
+}
+
+
+/* =========================
+   DIFFICULTY
+========================= */
+
+function spawnRate(){
+
+  return Math.max(
+    180,
+    650 -
+    elapsed * 3
+  );
+
+}
+
+function fallSpeed(){
+
+  return Math.min(
+    11,
+    3.5 +
+    elapsed * .045
+  );
+
+}
+
+
+/* =========================
+   SPAWN
+========================= */
+
+function spawnObject(){
+
+  if(!running){
+    return;
+  }
+
+  const roll =
+    Math.random();
+
+  let type;
+
+  if(roll < .72){
+
+    type = "enemy";
+
+  }
+  else if(roll < .93){
+
+    type = "gem";
+
+  }
+  else{
+
+    type = "star";
+
+  }
+
+  const el =
+    document.createElement(
+      "div"
+    );
+
+  el.className =
+    type;
+
+  const x =
+    20 +
+    Math.random() *
+    (arena.clientWidth - 40);
+
+  el.style.left =
+    x + "px";
+
+  el.style.top =
+    "-50px";
+
+  arena.appendChild(el);
+
+  const object = {
+    el,
+    x,
+    y:-50,
+    type,
+    speed:
+      fallSpeed() *
+      (
+        type === "enemy" &&
+        Math.random() < .15
+        ? 1.5
+        : 1
+      )
+  };
+
+  if(
+    type === "enemy" &&
+    Math.random() < .12
+  ){
+
+    el.classList.add("big");
+
+  }
+
+  if(
+    type === "enemy" &&
+    Math.random() < .15
+  ){
+
+    el.classList.add("fast");
+
+  }
+
+  if(type === "enemy"){
+
+    enemyList.push(object);
+
+  }
+  else{
+
+    itemList.push(object);
+
+  }
+
+}
+
+
+/* =========================
+   GAME LOOP
+========================= */
+
+function tick(){
+
+  if(!running){
+    return;
+  }
+
+  elapsed += .1;
+
+  dangerFill.style.width =
+    Math.min(
+      100,
+      elapsed / 60 * 100
+    ) + "%";
+
+  if(elapsed > 25){
+
+    game.classList.add(
+      "danger"
+    );
+
+  }
+
+  if(elapsed > 50){
+
+    game.classList.remove(
+      "danger"
+    );
+
+    game.classList.add(
+      "danger"
+    );
+
+  }
+
+  moveObjects();
+
+}
+
+
+/* =========================
+   MOVE
+========================= */
+
+function moveObjects(){
+
+  const playerY =
+    arena.clientHeight - 59;
+
+  const playerSize =
+    42;
+
+  enemyList =
+    enemyList.filter(
+      object=>{
+
+        object.y +=
+          object.speed;
+
+        object.el.style.top =
+          object.y + "px";
+
+        if(
+          checkCollision(
+            object,
+            playerY,
+            playerSize
+          )
+        ){
+
+          die();
+
+          return false;
+
+        }
+
+        if(
+          object.y >
+          arena.clientHeight + 80
+        ){
+
+          object.el.remove();
+
+          combo = 0;
+
+          updateHUD();
+
+          return false;
+
+        }
+
+        return true;
+
+      }
+    );
+
+
+  itemList =
+    itemList.filter(
+      object=>{
+
+        object.y +=
+          object.speed;
+
+        object.el.style.top =
+          object.y + "px";
+
+        if(
+          checkCollision(
+            object,
+            playerY,
+            playerSize
+          )
+        ){
+
+          collect(object);
+
+          return false;
+
+        }
+
+        if(
+          object.y >
+          arena.clientHeight + 80
+        ){
+
+          object.el.remove();
+
+          return false;
+
+        }
+
+        return true;
+
+      }
+    );
+
+}
+
+
+/* =========================
+   COLLISION
+========================= */
+
+function checkCollision(
+  object,
+  playerY,
+  playerSize
+){
+
+  const px =
+    playerX;
+
+  const py =
+    playerY;
+
+  let size =
+    22;
+
+  if(
+    object.type === "enemy"
+  ){
+
+    if(
+      object.el.classList.contains("big")
+    ){
+
+      size = 31;
+
+    }
+    else{
+
+      size = 20;
+
+    }
+
+  }
+  else{
+
+    size = 18;
+
+  }
+
+  return (
+    Math.abs(object.x - px)
+    <
+    playerSize / 2 + size
+    &&
+    Math.abs(object.y - py)
+    <
+    playerSize / 2 + size
+  );
+
+}
+
+
+/* =========================
+   COLLECT
+========================= */
+
+function collect(object){
+
+  object.el.remove();
+
+  const index =
+    itemList.indexOf(object);
+
+  if(index >= 0){
+
+    itemList.splice(
+      index,
+      1
+    );
+
+  }
+
+  if(object.type === "gem"){
+
+    combo++;
+
+    maxCombo =
+      Math.max(
+        maxCombo,
+        combo
+      );
+
+    const gain =
+      100 +
+      combo * 10;
+
+    score += gain;
+
+    popAt(
+      object.x,
+      object.y,
+      "+" + gain
+    );
+
+    particles(
+      object.x,
+      object.y,
+      10
+    );
+
+    beep(
+      700 +
+      Math.min(combo,20)*20,
+      .06
+    );
+
+  }
+
+  if(object.type === "star"){
+
+    combo += 3;
+
+    maxCombo =
+      Math.max(
+        maxCombo,
+        combo
+      );
+
+    const gain =
+      500 +
+      combo * 30;
+
+    score += gain;
+
+    popAt(
+      object.x,
+      object.y,
+      "⭐ +" + gain
+    );
+
+    particles(
+      object.x,
+      object.y,
+      22
+    );
+
+    beep(
+      1000,
+      .1,
+      "triangle"
+    );
+
+    setTimeout(
+      ()=>{
+        beep(
+          1400,
+          .1,
+          "triangle"
+        );
+      },
+      70
+    );
+
+  }
+
+  if(score > best){
+
+    best = score;
+
+    localStorage.setItem(
+      "dod2_best",
+      best
+    );
+
+  }
+
+  updateHUD();
+
+}
+
+
+/* =========================
+   DIE
+========================= */
+
+function die(){
+
+  if(!running){
+    return;
+  }
+
+  running = false;
+
+  clearInterval(
+    spawnTimer
+  );
+
+  clearInterval(
+    gameTimer
+  );
+
+  game.classList.remove(
+    "shake"
+  );
+
+  void game.offsetWidth;
+
+  game.classList.add(
+    "shake"
+  );
+
+  beep(
+    70,
+    .3,
+    "sawtooth",
+    .06
+  );
+
+  if(
+    navigator.vibrate
+  ){
+
+    navigator.vibrate(
+      [100,50,150]
+    );
+
+  }
+
+  finalScore.textContent =
+    Math.floor(score)
+    .toLocaleString();
+
+  finalBest.textContent =
+    Math.floor(best)
+    .toLocaleString();
+
+  finalCombo.textContent =
+    maxCombo;
+
+  record.classList.toggle(
+    "hidden",
+    score < best
+  );
+
+  missionText.textContent =
+    getMission();
+
+  setTimeout(
+    ()=>{
+      overScreen.classList.remove(
+        "hidden"
+      );
+    },
+    350
+  );
+
+}
+
+
+/* =========================
+   HUD
+========================= */
+
+function updateHUD(){
+
+  scoreEl.textContent =
+    Math.floor(score)
+    .toLocaleString();
+
+  comboEl.textContent =
+    "x" + combo;
+
+  bestEl.textContent =
+    Math.floor(best)
+    .toLocaleString();
+
+}
+
+
+/* =========================
+   POP
+========================= */
+
+function popAt(
+  x,
+  y,
+  text
+){
+
+  const p =
+    document.createElement(
+      "div"
+    );
+
+  p.className =
+    "pop";
+
+  p.textContent =
+    text;
+
+  p.style.left =
+    x + "px";
+
+  p.style.top =
+    y + "px";
+
+  p.style.color =
+    "#5deaff";
+
+  arena.appendChild(p);
+
+  setTimeout(
+    ()=>{
+      p.remove();
+    },
+    700
+  );
+
+}
+
+
+/* =========================
+   PARTICLES
+========================= */
+
+function particles(
+  x,
+  y,
+  count
+){
+
+  for(
+    let i=0;
+    i<count;
+    i++
+  ){
+
+    const p =
+      document.createElement(
+        "div"
+      );
+
+    p.className =
+      "particle";
+
+    p.style.left =
+      x + "px";
+
+    p.style.top =
+      y + "px";
+
+    const angle =
+      Math.random() *
+      Math.PI * 2;
+
+    const distance =
+      30 +
+      Math.random() * 80;
+
+    p.style.setProperty(
+      "--x",
+      Math.cos(angle) *
+      distance +
+      "px"
+    );
+
+    p.style.setProperty(
+      "--y",
+      Math.sin(angle) *
+      distance +
+      "px"
+    );
+
+    arena.appendChild(p);
+
+    setTimeout(
+      ()=>{
+        p.remove();
+      },
+      600
+    );
+
+  }
+
+}
+
+
+/* =========================
+   MISSION
+========================= */
+
+function getMission(){
+
+  if(maxCombo >= 30){
+
+    return "30 COMBO達成！";
+
+  }
+
+  if(score >= 10000){
+
+    return "10,000点突破！";
+
+  }
+
+  if(score >= 5000){
+
+    return "5,000点突破！";
+
+  }
+
+  if(elapsed >= 60){
+
+    return "60秒生存！";
+
+  }
+
+  return (
+    Math.floor(elapsed) +
+    "秒生存"
+  );
+
+}
+
+
+/* =========================
+   PLAYER CONTROL
+========================= */
+
+function movePlayer(clientX){
+
+  if(!running){
+    return;
+  }
+
+  const rect =
+    arena.getBoundingClientRect();
+
+  playerX =
+    Math.max(
+      25,
+      Math.min(
+        rect.width - 25,
+        clientX - rect.left
+      )
+    );
+
+  player.style.left =
+    playerX + "px";
+
+}
+
+
+arena.addEventListener(
+  "pointermove",
+  e=>{
+
+    movePlayer(
+      e.clientX
+    );
+
+  }
+);
+
+
+arena.addEventListener(
+  "pointerdown",
+  e=>{
+
+    movePlayer(
+      e.clientX
+    );
+
+  }
+);
+
+
+/* =========================
+   BUTTONS
+========================= */
+
+document
+  .getElementById("startBtn")
+  .addEventListener(
+    "click",
+    startGame
+  );
+
+
+document
+  .getElementById("retry")
+  .addEventListener(
+    "click",
+    startGame
+  );
+
+
+document
+  .getElementById("titleBtn")
+  .addEventListener(
+    "click",
+    ()=>{
+
+      overScreen.classList.add(
+        "hidden"
+      );
+
+      startScreen.classList.remove(
+        "hidden"
+      );
+
+    }
+  );
+
+
+document
+  .getElementById("resetBtn")
+  .addEventListener(
+    "click",
+    ()=>{
+
+      if(
+        !confirm(
+          "ハイスコアを削除しますか？"
+        )
+      ){
+
+        return;
+
+      }
+
+      localStorage.removeItem(
+        "dod2_best"
+      );
+
+      best = 0;
+
+      updateHUD();
+
+    }
+  );
+
+
+/* =========================
+   INITIALIZE
+========================= */
+
+bestEl.textContent =
+  best.toLocaleString();
+
+</script>
+
+</body>
+</html>
