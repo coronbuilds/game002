@@ -2,7 +2,9 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<meta name="viewport"
+      content="width=device-width,initial-scale=1.0,user-scalable=no">
+
 <title>DODGE OR DIE</title>
 
 <style>
@@ -12,25 +14,26 @@
   user-select: none;
 }
 
-html, body {
+html,
+body {
   margin: 0;
-  padding: 0;
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #080b12;
-  font-family: Arial, sans-serif;
+  background: #05070d;
   touch-action: none;
+  font-family: Arial, sans-serif;
 }
 
 #game {
-  position: relative;
-  width: 100vw;
-  height: 100vh;
+  position: fixed;
+  inset: 0;
   overflow: hidden;
   background:
-    linear-gradient(#0b1020, #05070c);
+    radial-gradient(circle at center, #10182b 0%, #05070d 75%);
 }
+
+/* HUD */
 
 #hud {
   position: absolute;
@@ -38,95 +41,130 @@ html, body {
   left: 0;
   width: 100%;
   padding: 0 18px;
+
   display: flex;
   justify-content: space-between;
+
   color: white;
   font-size: 18px;
   font-weight: bold;
-  z-index: 20;
+
+  z-index: 100;
   pointer-events: none;
 }
 
-#score {
-  color: #fff;
-}
-
-#best {
-  color: #aaa;
-}
+/* PLAYER */
 
 #player {
   position: absolute;
-  width: 54px;
-  height: 54px;
-  bottom: 45px;
-  left: 50%;
-  transform: translateX(-50%);
-  border-radius: 14px;
+
+  width: 52px;
+  height: 52px;
+
+  border-radius: 15px;
+
   background: #27a7ff;
-  box-shadow: 0 0 20px rgba(39,167,255,.6);
-  z-index: 10;
+
+  box-shadow:
+    0 0 12px #27a7ff,
+    0 0 28px rgba(39,167,255,.55);
+
+  z-index: 20;
+
+  transform: translate3d(0,0,0);
 }
+
+/* ENEMY */
 
 .enemy {
   position: absolute;
+
   width: 42px;
   height: 42px;
+
   border-radius: 50%;
+
   background: #ff304f;
-  box-shadow: 0 0 18px rgba(255,48,79,.6);
-  z-index: 5;
+
+  box-shadow:
+    0 0 12px #ff304f,
+    0 0 28px rgba(255,48,79,.55);
+
+  z-index: 10;
+
+  will-change: transform;
 }
+
+/* GEM */
 
 .gem {
   position: absolute;
-  width: 30px;
-  height: 30px;
-  transform: rotate(45deg);
+
+  width: 28px;
+  height: 28px;
+
   background: #55e6ff;
-  box-shadow: 0 0 18px rgba(85,230,255,.7);
-  z-index: 4;
+
+  transform: rotate(45deg);
+
+  box-shadow:
+    0 0 12px #55e6ff,
+    0 0 25px rgba(85,230,255,.6);
+
+  z-index: 9;
+
+  will-change: transform;
 }
 
-.gem::after {
-  content: "";
-  position: absolute;
-  inset: 6px;
-  background: #dfffff;
-}
+/* START / GAMEOVER */
 
 #message {
   position: absolute;
+
   inset: 0;
+
   display: flex;
+  flex-direction: column;
+
   align-items: center;
   justify-content: center;
-  flex-direction: column;
+
   color: white;
-  background: rgba(0,0,0,.65);
-  z-index: 50;
+
+  background: rgba(0,0,0,.72);
+
+  z-index: 200;
+
   text-align: center;
 }
 
 #message h1 {
-  margin: 0 0 12px;
+  margin: 0 0 15px;
+
   font-size: 42px;
+
+  letter-spacing: 2px;
 }
 
 #message p {
-  margin: 6px 0;
-  color: #ccc;
+  margin: 5px 0;
+
+  color: #bbb;
 }
 
 button {
-  margin-top: 22px;
-  border: 0;
+  margin-top: 25px;
+
+  padding: 14px 30px;
+
+  border: none;
   border-radius: 12px;
-  padding: 14px 28px;
-  font-size: 18px;
-  font-weight: bold;
+
   background: white;
   color: black;
+
+  font-size: 18px;
+  font-weight: bold;
 }
 
 .hidden {
@@ -147,379 +185,860 @@ button {
   <div id="player"></div>
 
   <div id="message">
+
     <h1>DODGE OR DIE</h1>
-    <p>🔴 避けろ</p>
-    <p>💎 取れ</p>
-    <p>指で左右に移動</p>
-    <button id="start">START</button>
+
+    <p>🔴 敵を避けろ</p>
+    <p>💎 青を取れ</p>
+    <p>👆 指を動かして移動</p>
+
+    <button id="start">
+      START
+    </button>
+
   </div>
 
 </div>
 
 <script>
+
 "use strict";
 
-/* =========================
-   基本設定
-========================= */
+/* ==================================================
+   ELEMENTS
+================================================== */
 
-const game = document.getElementById("game");
-const player = document.getElementById("player");
-const scoreText = document.getElementById("score");
-const bestText = document.getElementById("best");
-const message = document.getElementById("message");
-const startButton = document.getElementById("start");
+const game =
+  document.getElementById("game");
+
+const player =
+  document.getElementById("player");
+
+const scoreText =
+  document.getElementById("score");
+
+const bestText =
+  document.getElementById("best");
+
+const message =
+  document.getElementById("message");
+
+const startButton =
+  document.getElementById("start");
+
+
+/* ==================================================
+   GAME STATE
+================================================== */
 
 let running = false;
 
-let playerX = window.innerWidth / 2;
-let playerTargetX = playerX;
-
 let score = 0;
-let best = Number(localStorage.getItem("dod2_best") || 0);
 
-let enemies = [];
-let gems = [];
+let best =
+  Number(localStorage.getItem("dod2_best") || 0);
 
 let lastTime = 0;
+
 let enemyTimer = 0;
+
 let gemTimer = 0;
+
 let scoreTimer = 0;
 
 let difficulty = 1;
 
-bestText.textContent = "BEST " + best;
+
+/* ==================================================
+   PLAYER
+================================================== */
+
+const playerSize = 52;
+
+let playerX = 0;
+
+let playerY = 0;
 
 
-/* =========================
-   プレイヤー
-========================= */
+/*
+   タッチ開始地点
 
-function movePlayer(x) {
-  const width = game.clientWidth;
-  const half = 27;
+   ここが今回の重要ポイント。
 
-  playerTargetX = Math.max(
-    half,
-    Math.min(width - half, x)
-  );
+   「画面のどこを触ったか」ではなく、
+
+   「指がどれだけ動いたか」
+
+   だけを使って自機を動かす。
+*/
+
+let touchActive = false;
+
+let lastTouchX = 0;
+
+let lastTouchY = 0;
+
+
+/* ==================================================
+   OBJECT LIST
+================================================== */
+
+let enemies = [];
+
+let gems = [];
+
+
+/* ==================================================
+   INITIAL HUD
+================================================== */
+
+bestText.textContent =
+  "BEST " + best;
+
+
+/* ==================================================
+   PLAYER POSITION
+================================================== */
+
+function centerPlayer() {
+
+  playerX =
+    game.clientWidth / 2 -
+    playerSize / 2;
+
+  playerY =
+    game.clientHeight / 2 -
+    playerSize / 2;
+
+  updatePlayer();
 }
 
-game.addEventListener("pointermove", e => {
-  if (!running) return;
-  movePlayer(e.clientX);
-});
 
-game.addEventListener("pointerdown", e => {
-  if (!running) return;
-  movePlayer(e.clientX);
-});
+function updatePlayer() {
+
+  player.style.transform =
+    `translate3d(${playerX}px,${playerY}px,0)`;
+}
 
 
-/* =========================
-   敵生成
-========================= */
+/* ==================================================
+   KEEP PLAYER INSIDE SCREEN
+================================================== */
+
+function clampPlayer() {
+
+  const maxX =
+    game.clientWidth - playerSize;
+
+  const maxY =
+    game.clientHeight - playerSize;
+
+  playerX =
+    Math.max(
+      0,
+      Math.min(maxX, playerX)
+    );
+
+  playerY =
+    Math.max(
+      0,
+      Math.min(maxY, playerY)
+    );
+}
+
+
+/* ==================================================
+   TOUCH START
+================================================== */
+
+game.addEventListener(
+  "pointerdown",
+  e => {
+
+    if (!running) return;
+
+    touchActive = true;
+
+    lastTouchX = e.clientX;
+
+    lastTouchY = e.clientY;
+  }
+);
+
+
+/* ==================================================
+   TOUCH MOVE
+================================================== */
+
+game.addEventListener(
+  "pointermove",
+  e => {
+
+    if (!running) return;
+
+    if (!touchActive) return;
+
+
+    /*
+      指の移動量だけ取得
+    */
+
+    const dx =
+      e.clientX - lastTouchX;
+
+    const dy =
+      e.clientY - lastTouchY;
+
+
+    /*
+      自機を同じ距離だけ移動
+    */
+
+    playerX += dx;
+
+    playerY += dy;
+
+
+    /*
+      画面外に出さない
+    */
+
+    clampPlayer();
+
+    updatePlayer();
+
+
+    /*
+      次の基準位置
+    */
+
+    lastTouchX =
+      e.clientX;
+
+    lastTouchY =
+      e.clientY;
+  }
+);
+
+
+/* ==================================================
+   TOUCH END
+================================================== */
+
+game.addEventListener(
+  "pointerup",
+  () => {
+
+    touchActive = false;
+  }
+);
+
+game.addEventListener(
+  "pointercancel",
+  () => {
+
+    touchActive = false;
+  }
+);
+
+
+/* ==================================================
+   CREATE ENEMY
+================================================== */
 
 function createEnemy() {
 
-  const enemy = document.createElement("div");
-  enemy.className = "enemy";
+  const enemy =
+    document.createElement("div");
 
-  const width = game.clientWidth;
-  const x = Math.random() * (width - 42);
+  enemy.className =
+    "enemy";
 
-  enemy.style.left = x + "px";
-  enemy.style.top = "-50px";
+
+  const width =
+    game.clientWidth;
+
+  const height =
+    game.clientHeight;
+
+
+  /*
+    4方向から出現
+  */
+
+  const side =
+    Math.floor(Math.random() * 4);
+
+
+  let x;
+  let y;
+
+  let vx;
+  let vy;
+
+
+  const speed =
+    170 +
+    Math.random() * 100 +
+    difficulty * 15;
+
+
+  if (side === 0) {
+
+    // TOP
+
+    x =
+      Math.random() * width;
+
+    y = -60;
+
+    vx =
+      (Math.random() - 0.5) * 60;
+
+    vy = speed;
+
+  }
+
+  else if (side === 1) {
+
+    // RIGHT
+
+    x = width + 60;
+
+    y =
+      Math.random() * height;
+
+    vx = -speed;
+
+    vy =
+      (Math.random() - 0.5) * 60;
+
+  }
+
+  else if (side === 2) {
+
+    // BOTTOM
+
+    x =
+      Math.random() * width;
+
+    y = height + 60;
+
+    vx =
+      (Math.random() - 0.5) * 60;
+
+    vy = -speed;
+
+  }
+
+  else {
+
+    // LEFT
+
+    x = -60;
+
+    y =
+      Math.random() * height;
+
+    vx = speed;
+
+    vy =
+      (Math.random() - 0.5) * 60;
+  }
+
 
   game.appendChild(enemy);
 
+
   enemies.push({
+
     el: enemy,
-    x: x,
-    y: -50,
-    speed: 220 + Math.random() * 100 + difficulty * 15
+
+    x,
+    y,
+
+    vx,
+    vy
   });
+
+
+  enemy.style.transform =
+    `translate3d(${x}px,${y}px,0)`;
 }
 
 
-/* =========================
-   ジェム生成
-========================= */
+/* ==================================================
+   CREATE GEM
+================================================== */
 
 function createGem() {
 
-  const gem = document.createElement("div");
-  gem.className = "gem";
+  const gem =
+    document.createElement("div");
 
-  const width = game.clientWidth;
-  const x = Math.random() * (width - 30);
+  gem.className =
+    "gem";
 
-  gem.style.left = x + "px";
-  gem.style.top = "-40px";
+
+  const width =
+    game.clientWidth;
+
+  const height =
+    game.clientHeight;
+
+
+  const x =
+    30 +
+    Math.random() *
+    Math.max(1, width - 60);
+
+  const y =
+    30 +
+    Math.random() *
+    Math.max(1, height - 60);
+
 
   game.appendChild(gem);
 
+
   gems.push({
+
     el: gem,
-    x: x,
-    y: -40,
-    speed: 190 + difficulty * 10
+
+    x,
+
+    y,
+
+    life: 7
   });
+
+
+  gem.style.transform =
+    `translate3d(${x}px,${y}px,0) rotate(45deg)`;
 }
 
 
-/* =========================
-   当たり判定
-========================= */
+/* ==================================================
+   COLLISION
+================================================== */
 
-function hitTest(a, b, aw, ah, bw, bh) {
+function collision(a, b) {
 
   return (
-    a.x < b.x + bw &&
-    a.x + aw > b.x &&
-    a.y < b.y + bh &&
-    a.y + ah > b.y
+
+    a.x <
+    b.x + b.w &&
+
+    a.x + a.w >
+    b.x &&
+
+    a.y <
+    b.y + b.h &&
+
+    a.y + a.h >
+    b.y
   );
 }
 
 
-/* =========================
-   ゲーム開始
-========================= */
+/* ==================================================
+   START GAME
+================================================== */
 
 function startGame() {
 
-  enemies.forEach(e => e.el.remove());
-  gems.forEach(g => g.el.remove());
+  /*
+    古いオブジェクトを完全削除
+  */
+
+  enemies.forEach(
+    e => e.el.remove()
+  );
+
+  gems.forEach(
+    g => g.el.remove()
+  );
+
 
   enemies = [];
+
   gems = [];
 
+
   score = 0;
+
   difficulty = 1;
 
   enemyTimer = 0;
+
   gemTimer = 0;
+
   scoreTimer = 0;
 
-  playerX = game.clientWidth / 2;
-  playerTargetX = playerX;
 
-  player.style.left = playerX + "px";
+  centerPlayer();
 
-  scoreText.textContent = "SCORE 0";
 
-  message.classList.add("hidden");
+  scoreText.textContent =
+    "SCORE 0";
+
+
+  message.classList.add(
+    "hidden"
+  );
+
 
   running = true;
 
-  lastTime = performance.now();
+  lastTime =
+    performance.now();
 
-  requestAnimationFrame(gameLoop);
+
+  requestAnimationFrame(
+    gameLoop
+  );
 }
 
 
-/* =========================
-   ゲームオーバー
-========================= */
+/* ==================================================
+   GAME OVER
+================================================== */
 
 function gameOver() {
 
   running = false;
 
+  touchActive = false;
+
+
   if (score > best) {
+
     best = score;
-    localStorage.setItem("dod2_best", best);
+
+    localStorage.setItem(
+      "dod2_best",
+      best
+    );
   }
 
-  bestText.textContent = "BEST " + best;
+
+  bestText.textContent =
+    "BEST " + best;
+
 
   message.innerHTML = `
+
     <h1>GAME OVER</h1>
+
     <p>SCORE ${score}</p>
+
     <p>BEST ${best}</p>
-    <button id="restart">RETRY</button>
+
+    <button id="restart">
+      RETRY
+    </button>
   `;
 
-  message.classList.remove("hidden");
 
-  document.getElementById("restart")
-    .addEventListener("click", startGame);
+  message.classList.remove(
+    "hidden"
+  );
+
+
+  document
+    .getElementById("restart")
+    .addEventListener(
+      "click",
+      startGame
+    );
 }
 
 
-/* =========================
-   メインゲームループ
-========================= */
+/* ==================================================
+   MAIN LOOP
+================================================== */
 
 function gameLoop(now) {
 
   if (!running) return;
 
-  const dt = Math.min(
-    (now - lastTime) / 1000,
-    0.05
-  );
+
+  /*
+    経過時間
+
+    最大50msまでに制限。
+
+    これで一時的な処理落ちによる
+    「瞬間移動」も防ぐ。
+  */
+
+  const dt =
+    Math.min(
+      (now - lastTime) / 1000,
+      0.05
+    );
+
 
   lastTime = now;
 
-  /* 難易度 */
-  difficulty += dt * 0.025;
 
-  /* プレイヤーを滑らかに移動 */
+  /*
+    徐々に難しくする
+  */
 
-  const smooth = 1 - Math.pow(0.0001, dt);
-
-  playerX +=
-    (playerTargetX - playerX) * smooth;
-
-  player.style.left = playerX + "px";
+  difficulty +=
+    dt * 0.02;
 
 
-  /* 敵生成 */
+  /* ==================================================
+     ENEMY SPAWN
+  ================================================== */
 
   enemyTimer += dt;
 
+
   const enemyInterval =
     Math.max(
-      0.25,
-      0.75 - difficulty * 0.025
+      0.28,
+      0.85 -
+      difficulty * 0.025
     );
 
-  if (enemyTimer >= enemyInterval) {
+
+  if (
+    enemyTimer >=
+    enemyInterval
+  ) {
+
     enemyTimer = 0;
+
     createEnemy();
   }
 
 
-  /* ジェム生成 */
+  /* ==================================================
+     GEM SPAWN
+  ================================================== */
 
   gemTimer += dt;
 
-  if (gemTimer >= 1.8) {
+
+  if (
+    gemTimer >= 1.6
+  ) {
+
     gemTimer = 0;
+
     createGem();
   }
 
 
-  /* スコア */
+  /* ==================================================
+     SCORE
+  ================================================== */
 
   scoreTimer += dt;
 
-  if (scoreTimer >= 0.1) {
+
+  if (
+    scoreTimer >= 0.1
+  ) {
+
     scoreTimer = 0;
+
     score++;
+
     scoreText.textContent =
       "SCORE " + score;
   }
 
 
-  /* =====================
-     敵の移動
-  ===================== */
+  /* ==================================================
+     PLAYER RECT
+  ================================================== */
 
-  for (let i = enemies.length - 1; i >= 0; i--) {
+  const playerRect = {
 
-    const enemy = enemies[i];
+    x: playerX,
 
-    enemy.y += enemy.speed * dt;
+    y: playerY,
 
-    enemy.el.style.transform =
-      `translate3d(0, ${enemy.y}px, 0)`;
+    w: playerSize,
+
+    h: playerSize
+  };
+
+
+  /* ==================================================
+     ENEMIES
+  ================================================== */
+
+  for (
+    let i = enemies.length - 1;
+    i >= 0;
+    i--
+  ) {
+
+    const enemy =
+      enemies[i];
+
 
     /*
-      画面外に出たら削除
+      移動
+
+      毎フレームの経過時間を
+      掛けるので滑らか。
     */
 
-    if (enemy.y > game.clientHeight + 60) {
+    enemy.x +=
+      enemy.vx * dt;
+
+    enemy.y +=
+      enemy.vy * dt;
+
+
+    enemy.el.style.transform =
+      `translate3d(
+        ${enemy.x}px,
+        ${enemy.y}px,
+        0
+      )`;
+
+
+    /*
+      画面外に完全に出たら削除
+    */
+
+    const margin = 100;
+
+
+    if (
+
+      enemy.x <
+        -margin ||
+
+      enemy.x >
+        game.clientWidth +
+        margin ||
+
+      enemy.y <
+        -margin ||
+
+      enemy.y >
+        game.clientHeight +
+        margin
+
+    ) {
 
       enemy.el.remove();
+
       enemies.splice(i, 1);
 
       continue;
     }
 
+
     /*
-      プレイヤーとの衝突
+      当たり判定
     */
 
-    const playerRect = {
-      x: playerX - 27,
-      y: game.clientHeight - 45 - 54,
-      w: 54,
-      h: 54
-    };
-
     const enemyRect = {
+
       x: enemy.x,
+
       y: enemy.y,
+
       w: 42,
+
       h: 42
     };
 
+
     if (
-      hitTest(
+      collision(
         playerRect,
-        enemyRect,
-        playerRect.w,
-        playerRect.h,
-        enemyRect.w,
-        enemyRect.h
+        enemyRect
       )
     ) {
 
       gameOver();
+
       return;
     }
   }
 
 
-  /* =====================
-     ジェムの移動
-  ===================== */
+  /* ==================================================
+     GEMS
+  ================================================== */
 
-  for (let i = gems.length - 1; i >= 0; i--) {
+  for (
+    let i = gems.length - 1;
+    i >= 0;
+    i--
+  ) {
 
-    const gem = gems[i];
+    const gem =
+      gems[i];
 
-    gem.y += gem.speed * dt;
+
+    gem.life -= dt;
+
+
+    /*
+      少しだけ浮遊アニメーション
+    */
+
+    const floatY =
+      Math.sin(
+        performance.now() / 180
+      ) * 4;
+
 
     gem.el.style.transform =
-      `translate3d(0, ${gem.y}px, 0) rotate(45deg)`;
+      `translate3d(
+        ${gem.x}px,
+        ${gem.y + floatY}px,
+        0
+      ) rotate(45deg)`;
 
 
-    if (gem.y > game.clientHeight + 50) {
+    /*
+      消滅
+    */
+
+    if (
+      gem.life <= 0
+    ) {
 
       gem.el.remove();
+
       gems.splice(i, 1);
 
       continue;
     }
 
 
-    const playerRect = {
-      x: playerX - 27,
-      y: game.clientHeight - 45 - 54,
-      w: 54,
-      h: 54
-    };
+    /*
+      ジェム取得
+    */
 
     const gemRect = {
-      x: gem.x,
-      y: gem.y,
-      w: 30,
-      h: 30
+
+      x: gem.x - 4,
+
+      y: gem.y - 4,
+
+      w: 36,
+
+      h: 36
     };
 
 
     if (
-      hitTest(
+      collision(
         playerRect,
-        gemRect,
-        playerRect.w,
-        playerRect.h,
-        gemRect.w,
-        gemRect.h
+        gemRect
       )
     ) {
 
@@ -528,24 +1047,39 @@ function gameLoop(now) {
       scoreText.textContent =
         "SCORE " + score;
 
+
       gem.el.remove();
+
       gems.splice(i, 1);
     }
   }
 
 
-  requestAnimationFrame(gameLoop);
+  /*
+    次のフレーム
+  */
+
+  requestAnimationFrame(
+    gameLoop
+  );
 }
 
 
-/* =========================
-   START
-========================= */
+/* ==================================================
+   START BUTTON
+================================================== */
 
 startButton.addEventListener(
   "click",
   startGame
 );
+
+
+/* ==================================================
+   INITIAL POSITION
+================================================== */
+
+centerPlayer();
 
 </script>
 
